@@ -1,51 +1,89 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <title>A-Frame Szene Mixed Reality</title>
-  </head>
-  <body>
-    <a-scene shadow="type: pcfsoft">
-      <!-- qulle: A-Frame Docu -->
-      <!-- lichtquelle + ambient light, weil ich fancy bin -->
-      <a-entity light="type:directional; castShadow:true;" position="1 1 1"></a-entity>
-      <a-entity light="type: hemisphere; color: #ffbe4c ; groundColor: #4e750f ;  intensity: 0.5"></a-entity>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Car Race Track</title>
+  <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+  <script>
+    // Auto Controls
+    AFRAME.registerComponent('car-controller', {
+      schema: {
+        speed: { type: 'number', default: 0 },
+        acceleration: { type: 'number', default: 0.05 },
+        braking: { type: 'number', default: 0.1 },
+        maxSpeed: { type: 'number', default: 1 }
+      },
+      init: function () {
+        this.direction = new THREE.Vector3(0, 0, -1); // Forward direction
+        this.rotation = 0; // Rotation for turning
+        this.el.sceneEl.addEventListener('controllerconnected', (evt) => {
+          this.controller = evt.detail.component.el;
+        });
+      },
+      tick: function (time, timeDelta) {
+        if (!this.controller) return;
 
-      <!-- boden für schatten-sichtbarkeit -->
-      <a-plane position="0 0 0" rotation="-90 0 0" width="10" height="10" color="#6c765c" shadow="receive: true"></a-plane>
+        // Controller Buttons von der Quest
+        const input = this.controller.components;
+        if (input && input['oculus-touch-controls']) {
+          const buttons = input['oculus-touch-controls'].buttonStates;
+          const joystick = input['oculus-touch-controls'].axis;
 
-      <!-- würfel (1 objekt) -->
-      <a-box position="-1 1 -3" width="1" height="1" depth="1" src="textures/grass.jpg" shadow="cast: true"></a-box>
+          // "A" = nach vorne fahren
+          if (buttons[0].pressed) {
+            this.data.speed = Math.min(this.data.maxSpeed, this.data.speed + this.data.acceleration);
+          }
 
-      <!-- kugel (2 objekt) -->
-      <a-sphere position="1 1 -3" radius="0.5" color="#b36cea" shadow="cast: true"></a-sphere>
+          // "B" = stoppen
+          if (buttons[1].pressed) {
+            this.data.speed = Math.max(0, this.data.speed - this.data.braking);
+          }
 
-      <!-- kugel, die orbitiert (3 objekt) -->
-      <a-entity rotation="5 5 5" animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
-        <a-sphere position="4 4 4" color="#f0ff00"></a-sphere>
-      </a-entity>
+          // linker Joystick = Richtung ändern
+          this.rotation += joystick[0] * -0.05;
+          this.direction.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+        }
 
-      <!-- zylinder (4 objekt) -->
-      <a-cylinder position="0 0.5 -2" radius="0.3" height="1" color="#91d4f0" shadow="cast: true"></a-cylinder>
+        // Autoposition updateb
+        const move = this.direction.clone().multiplyScalar(this.data.speed * timeDelta / 1000);
+        this.el.object3D.position.add(move);
+        this.el.object3D.rotation.y = this.rotation;
+      }
+    });
+  </script>
+</head>
+<body>
+  <a-scene>
+    <!-- track -->
+    <a-ring 
+      position="0 0 0" 
+      radius-inner="5" 
+      radius-outer="5.5" 
+      color="gray" 
+      rotation="-90 0 0">
+    </a-ring>
 
-      <!-- 3d-modelle (shiba inu + haus) (6 objekt) -->
-      <a-entity
-        gltf-model="url(models/shiba/scene.gltf)"
-        rotation="30 -85 0"
-        position="5 4 0"
-        scale="7 7 7"
-        shadow="cast: true"
-      ></a-entity>
+    <!-- car -->
+    <a-box 
+      id="car" 
+      position="0 0.5 -5" 
+      rotation="0 0 0" 
+      color="red" 
+      depth="1" 
+      height="0.5" 
+      width="0.5" 
+      car-controller>
+    </a-box>
 
-      <a-entity
-      gltf-model="url(models/housr/scene.gltf)"
-      rotation="0 180 0"
-      position="-1 0 0"
-      scale="11 11 11"
-      shadow="cast: true"
-    ></a-entity>
-    </a-scene>
-  </body>
+    <!-- environment -->
+    <a-light type="ambient" color="#FFF"></a-light>
+    <a-light type="directional" position="0 5 0" intensity="1"></a-light>
+    <a-camera position="0 1.6 10" wasd-controls="enabled: false">
+      <a-entity 
+        oculus-touch-controls="hand: left"></a-entity>
+      <a-entity 
+        oculus-touch-controls="hand: right"></a-entity>
+    </a-camera>
+  </a-scene>
+</body>
 </html>
