@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Car Race Track</title>
+  <title>VR Car Race Track</title>
   <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
   <script>
-    // Auto Controls
     AFRAME.registerComponent('car-controller', {
       schema: {
-        speed: { type: 'number', default: 0 },
         acceleration: { type: 'number', default: 0.05 },
         braking: { type: 'number', default: 0.1 },
-        maxSpeed: { type: 'number', default: 1 }
+        maxSpeed: { type: 'number', default: 2 },
       },
       init: function () {
+        this.speed = 0; // Initial speed
         this.direction = new THREE.Vector3(0, 0, -1); // Forward direction
-        this.rotation = 0; // Rotation for turning
+        this.rotation = 0; // Initial rotation angle
+        this.controller = null;
+
+        // Listen for button events
         this.el.sceneEl.addEventListener('controllerconnected', (evt) => {
           this.controller = evt.detail.component.el;
         });
@@ -23,29 +25,28 @@
       tick: function (time, timeDelta) {
         if (!this.controller) return;
 
-        // Controller Buttons von der Quest
-        const input = this.controller.components;
-        if (input && input['oculus-touch-controls']) {
-          const buttons = input['oculus-touch-controls'].buttonStates;
-          const joystick = input['oculus-touch-controls'].axis;
+        const controls = this.controller.components['oculus-touch-controls'];
+        if (!controls) return;
 
-          // "A" = nach vorne fahren
-          if (buttons[0].pressed) {
-            this.data.speed = Math.min(this.data.maxSpeed, this.data.speed + this.data.acceleration);
-          }
+        const { buttonStates, axis } = controls;
 
-          // "B" = stoppen
-          if (buttons[1].pressed) {
-            this.data.speed = Math.max(0, this.data.speed - this.data.braking);
-          }
-
-          // linker Joystick = Richtung ändern
-          this.rotation += joystick[0] * -0.05;
-          this.direction.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+        // Handle "A" button for acceleration
+        if (buttonStates[0]?.pressed) {
+          this.speed = Math.min(this.data.maxSpeed, this.speed + this.data.acceleration);
         }
 
-        // Autoposition updateb
-        const move = this.direction.clone().multiplyScalar(this.data.speed * timeDelta / 1000);
+        // Handle "B" button for braking
+        if (buttonStates[1]?.pressed) {
+          this.speed = Math.max(0, this.speed - this.data.braking);
+        }
+
+        // Handle joystick for direction
+        const turn = axis[0] * -0.05; // Horizontal joystick controls turning
+        this.rotation += turn;
+        this.direction.set(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotation);
+
+        // Move the car based on speed and direction
+        const move = this.direction.clone().multiplyScalar(this.speed * timeDelta / 1000);
         this.el.object3D.position.add(move);
         this.el.object3D.rotation.y = this.rotation;
       }
@@ -54,7 +55,7 @@
 </head>
 <body>
   <a-scene>
-    <!-- track -->
+    <!-- Circular Race Track -->
     <a-ring 
       position="0 0 0" 
       radius-inner="5" 
@@ -63,7 +64,7 @@
       rotation="-90 0 0">
     </a-ring>
 
-    <!-- car -->
+    <!-- Car Entity -->
     <a-box 
       id="car" 
       position="0 0.5 -5" 
@@ -75,15 +76,15 @@
       car-controller>
     </a-box>
 
-    <!-- environment -->
+    <!-- Camera with Oculus Controllers -->
+    <a-camera position="0 1.6 10" wasd-controls="enabled: false">
+      <a-entity oculus-touch-controls="hand: left"></a-entity>
+      <a-entity oculus-touch-controls="hand: right"></a-entity>
+    </a-camera>
+
+    <!-- Lighting -->
     <a-light type="ambient" color="#FFF"></a-light>
     <a-light type="directional" position="0 5 0" intensity="1"></a-light>
-    <a-camera position="0 1.6 10" wasd-controls="enabled: false">
-      <a-entity 
-        oculus-touch-controls="hand: left"></a-entity>
-      <a-entity 
-        oculus-touch-controls="hand: right"></a-entity>
-    </a-camera>
   </a-scene>
 </body>
 </html>
