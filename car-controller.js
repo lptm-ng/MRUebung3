@@ -12,37 +12,57 @@ AFRAME.registerComponent('car-controller', {
   init: function () {
     this.moving = false;
     this.braking = false;
+    this.rightController = document.querySelector('[right-controller]');
+    this.aButtonPressed = false;
+    this.bButtonPressed = false;
   },
   tick: function () {
-    // controller input
+    // get controller input
     let leftController = document.querySelector('[left-controller]');
-    let rightController = document.querySelector('[right-controller]');
+    
 
-
-    if (leftController && rightController && leftController.components['oculus-quest-controls'] && rightController.components['oculus-quest-controls']) {
+    if (leftController && this.rightController && leftController.components['oculus-quest-controls'] && this.rightController.components['oculus-quest-controls']) {
       let leftJoystick = leftController.components['oculus-quest-controls'].thumbstick;
-      let aButton = rightController.components['oculus-quest-controls'].getButton('aButton');
-      let bButton = rightController.components['oculus-quest-controls'].getButton('bButton');
+
+       // 'right-controller' property to trigger the getButton action
+        let aButton = this.rightController.components['oculus-quest-controls'].getButton('aButton');
+        let bButton = this.rightController.components['oculus-quest-controls'].getButton('bButton');
+    
+        // button press states
+        if(aButton && !this.aButtonPressed) {
+            this.aButtonPressed = true;
+           this.moving = true;
+           this.braking = false;
+            
+         } else if(!aButton && this.aButtonPressed){
+             this.aButtonPressed = false
+             this.moving = false;
+        }
+
+        if(bButton && !this.bButtonPressed) {
+          this.bButtonPressed = true;
+           this.braking = true;
+           this.moving = false;
+            
+         } else if(!bButton && this.bButtonPressed){
+             this.bButtonPressed = false;
+              this.braking = false;
+        }
 
       // acceleration/braking
-      if (bButton) {
-          this.braking = true;
-          this.moving = false;
+       if (this.bButtonPressed) {
           this.data.speed -= this.data.brakingForce
           if(this.data.speed < 0){
               this.data.speed = 0
           }
         
-      } else if (aButton) {
-        this.moving = true;
-          this.braking = false;
-          this.data.speed += this.data.acceleration;
+      } else if (this.aButtonPressed) {
+        this.data.speed += this.data.acceleration;
         
         if (this.data.speed > this.data.maxSpeed) {
           this.data.speed = this.data.maxSpeed;
         }
       }else{
-          this.braking = false;
           if (this.data.speed > 0 && !this.moving){
             this.data.speed -= this.data.deceleration
           }
