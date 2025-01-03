@@ -7,20 +7,21 @@
 </head>
 <body>
   <a-scene>
-    <a-entity id="cameraRig">
+  <a-entity id="cameraRig" position="0 5 0" rotation="-45 0 0">
         <a-entity camera look-controls wasd-controls id="camera"></a-entity>
     </a-entity>
 
     <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
     <a-entity oculus-touch-controls="hand: right" id="rightController" class="controller"></a-entity>
 
+    <a-plane color="gray" width="20" height="20" rotation="-90 0 0" position="0 -0.1 0"></a-plane>
 
     <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
       
     </a-entity>
 
     <script>
-      AFRAME.registerComponent('car-controls', {
+        AFRAME.registerComponent('car-controls', {
           init: function () {
               this.el.sceneEl.addEventListener('thumbstickmoved', this.moveCar.bind(this));
               this.car = document.getElementById('car');
@@ -102,6 +103,7 @@
              }
         }
      });
+
 
       // Attach components
       document.getElementById('leftController').setAttribute('car-controls', '');
