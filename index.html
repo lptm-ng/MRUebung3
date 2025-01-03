@@ -1,83 +1,112 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Oculus Quest Car Drive</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="car-controller.js"></script>
-    <script>
-        AFRAME.registerComponent('camera-control', {
-             schema: {
-                offsetDistance: { type: 'number', default: 20 },
-                offsetY: {type: 'number', default: 8},
-                cameraAngle: { type: 'number', default: -0.2}
-            },
-            init: function() {
-                 const car = document.getElementById('car');
-                 const cameraRig = document.getElementById('cameraRig');
-                const camera = this.el;
-
-
-                if(car && cameraRig) {
-                    const carPosition = car.object3D.position;
-
-                     const offset = new THREE.Vector3(0, this.data.offsetY, this.data.offsetDistance);
-
-                     // initial camera position
-                    const initialPosition = new THREE.Vector3().copy(carPosition).add(offset.applyQuaternion(car.object3D.quaternion));
-                    cameraRig.object3D.position.copy(initialPosition);
-
-
-                    //initial rotation of camera rig
-                    const initialRotation = car.object3D.rotation.clone();
-                     initialRotation.x += this.data.cameraAngle
-                   cameraRig.object3D.rotation.copy(initialRotation)
-
-                }
-            },
-            tick: function () {
-                const car = document.getElementById('car');
-               const cameraRig = document.getElementById('cameraRig');
-                const rightController = document.getElementById('right-controller'); // Get controller using ID
-
-                if (car && rightController && rightController.components['oculus-quest-controls'] && cameraRig) {
-                   const carPosition = car.object3D.position;
-
-                    // camera following logic
-                   const offset = new THREE.Vector3(0, this.data.offsetY, this.data.offsetDistance);
-                    const desiredPosition = new THREE.Vector3().copy(carPosition).add(offset.applyQuaternion(car.object3D.quaternion));
-                    cameraRig.object3D.position.lerp(desiredPosition,0.05);
-
-
-                    // camera rotation based on right controller
-                    const rightJoystick = rightController.components['oculus-quest-controls'].thumbstick
-                    cameraRig.object3D.rotation.y -= rightJoystick.x*2*Math.PI/360 * 0.5
-                }
-            }
-        });
-    </script>
+  <meta charset="utf-8">
+  <title>A-Frame Car Test</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-<a-scene>
-    <a-entity id="cameraRig" camera-control >
-        <a-entity id="camera" camera look-controls="enabled:false"></a-entity>
+  <a-scene>
+    <a-entity id="cameraRig">
+        <a-entity camera look-controls wasd-controls id="camera"></a-entity>
     </a-entity>
 
-    <a-plane
-            rotation="-90 0 0"
-            width="100"
-            height="100"
-            color="#777"
-            shadow
-    ></a-plane>
+    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
+    <a-entity oculus-touch-controls="hand: right" id="rightController" class="controller"></a-entity>
 
-    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0.2 0" rotation="0 180 0" scale="0.03 0.03 0.03" shadow car-controller>
+
+    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
+      
     </a-entity>
 
-    <a-entity oculus-quest-controls="hand:left;" id="left-controller" left-controller></a-entity>
-    <a-entity oculus-quest-controls="hand:right;" id="right-controller" right-controller></a-entity>
+    <script>
+      AFRAME.registerComponent('car-controls', {
+          init: function () {
+              this.el.sceneEl.addEventListener('thumbstickmoved', this.moveCar.bind(this));
+              this.car = document.getElementById('car');
+          },
+          moveCar: function (evt) {
+              const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+              if (hand === 'left') {
+                  const thumbstickX = evt.detail.x;
+                  const thumbstickY = evt.detail.y;
+                  const speed = 0.05;
+                
+                 // Convert car's rotation to radians
+                const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
 
-    <a-entity light="type: ambient; color: #BBB"></a-entity>
-    <a-entity light="type: directional; color: #FFF; intensity: 0.6" position="-0.5 1 1"></a-entity>
-</a-scene>
+                 //Calculate movement relative to car's direction
+                  const movementX = (thumbstickX * speed) * Math.cos(carRotationY) - (-thumbstickY * speed) * Math.sin(carRotationY);
+                  const movementZ = (thumbstickX * speed) * Math.sin(carRotationY) + (-thumbstickY * speed) * Math.cos(carRotationY);
+
+
+                  const currentPosition = this.car.getAttribute('position');
+                  this.car.setAttribute('position', {
+                      x: currentPosition.x + movementX,
+                      y: currentPosition.y,
+                      z: currentPosition.z + movementZ
+                  });
+
+                  // Rotate car left or right
+                   const rotationSpeed = 0.5;
+                  const turnAmount = -thumbstickX * rotationSpeed;
+                  const currentRotation = this.car.getAttribute('rotation');
+                    this.car.setAttribute('rotation', {
+                    x: currentRotation.x,
+                    y: currentRotation.y + turnAmount,
+                    z: currentRotation.z,
+                  });
+
+              }
+          }
+      });
+
+
+      AFRAME.registerComponent('camera-controls', {
+        init: function () {
+            this.el.sceneEl.addEventListener('thumbstickmoved', this.moveCamera.bind(this));
+             this.cameraRig = document.getElementById('cameraRig');
+             this.camera = document.getElementById('camera');
+
+        },
+       moveCamera: function (evt) {
+             const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+             if (hand === 'right') {
+               const thumbstickX = evt.detail.x;
+               const thumbstickY = evt.detail.y;
+                 
+               const rotationSpeed = 2;
+               const turnAmount = thumbstickX * rotationSpeed;
+               const tiltAmount = thumbstickY * rotationSpeed;
+
+             
+                //Rotate the camera on the Y-Axis
+                const currentRotationY = this.cameraRig.getAttribute('rotation').y;
+                this.cameraRig.setAttribute('rotation', {
+                  x: this.cameraRig.getAttribute('rotation').x,
+                  y: currentRotationY + turnAmount,
+                  z: this.cameraRig.getAttribute('rotation').z
+                 })
+
+               //Tilt the camera on the X-Axis
+                 let currentRotationX = this.camera.getAttribute('rotation').x;
+                 currentRotationX = currentRotationX + tiltAmount
+                currentRotationX = Math.max(-60, Math.min(currentRotationX, 60))  //Clamp the value so it doesnt go upside down
+
+                this.camera.setAttribute('rotation', {
+                    x: currentRotationX,
+                    y: this.camera.getAttribute('rotation').y,
+                    z: this.camera.getAttribute('rotation').z
+                })
+
+             }
+        }
+     });
+
+      // Attach components
+      document.getElementById('leftController').setAttribute('car-controls', '');
+      document.getElementById('rightController').setAttribute('camera-controls', '');
+    </script>
+  </a-scene>
 </body>
 </html>
