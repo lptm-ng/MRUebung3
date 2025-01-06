@@ -7,16 +7,17 @@
 </head>
 <body>
 <a-scene>
-    <a-entity camera wasd-controls look-controls position="0 2 -2" id="camera"></a-entity>
+    <!-- Angepasste Kameraposition -->
+    <a-entity camera wasd-controls look-controls position="0 5 -5" id="camera"></a-entity>
     <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
 
     <a-plane color="white" width="30" height="30" rotation="-90 0 0" position="0 -0.1 0" id="whitePlane"></a-plane>
-    
     <a-plane color="black" width="15" height="15" rotation="-90 0 0" position="0.05 0.1 0.05"></a-plane>
 
-    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
+     <!-- Angepasste Auto-Ausrichtung -->
+     <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 90 0" scale="0.02 0.02 0.02">
         <a-entity id="car-start" geometry="primitive: sphere; radius: 0.1" material="color: red" position="0 0 0.5"></a-entity>
-    </a-entity>
+     </a-entity>
 
     <script>
         AFRAME.registerComponent('car-controls', {
@@ -54,19 +55,19 @@
                         y: currentPosition.y,
                         z: currentPosition.z + forwardVector.z + sideVector.z,
                     });
-                  
+
                     // Rotation
                     if (thumbstickX !== 0) {
                        const rotationSpeed = 0.5;
                        const turnAmount = -thumbstickX * rotationSpeed;
                        const currentRotation = this.car.getAttribute('rotation');
                        this.car.setAttribute('rotation', {
-                           x: currentRotation.x,
-                           y: currentRotation.y + turnAmount,
-                           z: currentRotation.z,
-                      });
+                            x: currentRotation.x,
+                            y: currentRotation.y + turnAmount,
+                            z: currentRotation.z,
+                         });
+                    }
                  }
-                }
             },
              brake: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
