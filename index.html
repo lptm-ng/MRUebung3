@@ -9,7 +9,8 @@
 <a-scene>
     <!-- Angepasste Kameraposition, um VR/AR-Buttons sichtbar zu machen -->
     <a-entity camera wasd-controls look-controls position="0 3 -4" rotation="-15 0 0" id="camera"></a-entity>
-    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
+    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller" car-controls=""></a-entity>
+        <a-entity oculus-touch-controls="hand: right" id="rightController" class="controller" car-rotation=""></a-entity>
 
     <a-plane color="white" width="30" height="30" rotation="-90 0 0" position="0 -0.1 0" id="whitePlane"></a-plane>
     <a-plane color="black" width="15" height="15" rotation="-90 0 0" position="0.05 0.1 0.05"></a-plane>
@@ -23,7 +24,7 @@
         AFRAME.registerComponent('car-controls', {
             init: function () {
                 this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
-                this.el.addEventListener('axismove', this.brake.bind(this));
+                  this.el.addEventListener('axismove', this.brake.bind(this));
                 this.car = document.getElementById('car');
                 this.carStart = document.getElementById('car-start');
                 this.speed = 0;
@@ -34,10 +35,45 @@
             handleThumbstick: function (evt) {
                 const hand = evt.target.getAttribute('oculus-touch-controls').hand;
                 if (hand === 'left') {
-                    const thumbstickX = evt.detail.x;
-                    const thumbstickY = evt.detail.y;
+                     const thumbstickY = evt.detail.y;
 
-                    // Rotation nur bei links/rechts
+                     if (thumbstickY < 0) {
+                           this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+                     } else if (thumbstickY > 0) {
+                         this.speed = Math.max(this.speed - this.acceleration, -this.maxSpeed); // Rückwärtsbewegung
+                       } else {
+                         this.speed = Math.max(0, this.speed - this.brakingForce); //keine Bewegung
+                        }
+                       
+                         let forwardVector = new THREE.Vector3(0, 0, -1);
+                        forwardVector.applyQuaternion(this.car.object3D.quaternion);
+                         forwardVector.multiplyScalar(-this.speed);
+                         
+                         const currentPosition = this.car.getAttribute('position');
+                         this.car.setAttribute('position', {
+                             x: currentPosition.x + forwardVector.x,
+                            y: currentPosition.y,
+                             z: currentPosition.z + forwardVector.z,
+                       });
+                   }
+               },
+                brake: function (evt) {
+              const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+              if (hand === 'left' && evt.detail.axis[3] < -0.8) {
+                this.speed = Math.max(0, this.speed - this.brakingForce);
+              }
+            }
+        });
+         AFRAME.registerComponent('car-rotation', {
+           init: function () {
+               this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
+                 this.car = document.getElementById('car');
+           },
+             handleThumbstick: function (evt) {
+                 const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+                if (hand === 'right') {
+                    const thumbstickX = evt.detail.x;
+                     // Rotation nur bei links/rechts
                     if (thumbstickX !== 0) {
                         const rotationSpeed = 0.5;
                         const turnAmount = -thumbstickX * rotationSpeed;
@@ -47,42 +83,10 @@
                             y: currentRotation.y + turnAmount,
                             z: currentRotation.z,
                         });
-                   }
-                   
-                   // Bewegung nur bei vor/zurück
-                   if (thumbstickY !== 0) {
-                    
-                        if (thumbstickY < 0) {
-                          this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-                       } else if (thumbstickY > 0) {
-                         this.speed = Math.max(this.speed - this.acceleration, -this.maxSpeed); // Rückwärtsbewegung
-                        } else {
-                           this.speed = Math.max(0, this.speed - this.brakingForce); //keine Bewegung
-                        }
-                       
-                         let forwardVector = new THREE.Vector3(0, 0, -1);
-                         forwardVector.applyQuaternion(this.car.object3D.quaternion);
-                         forwardVector.multiplyScalar(-this.speed);
-                        
-                        
-                         const currentPosition = this.car.getAttribute('position');
-                         this.car.setAttribute('position', {
-                             x: currentPosition.x + forwardVector.x,
-                            y: currentPosition.y,
-                             z: currentPosition.z + forwardVector.z,
-                       });
-                   }
-                  }
-                },
-            brake: function (evt) {
-              const hand = evt.target.getAttribute('oculus-touch-controls').hand;
-              if (hand === 'left' && evt.detail.axis[3] < -0.8) {
-                this.speed = Math.max(0, this.speed - this.brakingForce);
-              }
+                    }
+                }
             }
-        });
-        
-         document.getElementById('leftController').setAttribute('car-controls', '');
+         });
     </script>
 </a-scene>
 </body>
