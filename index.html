@@ -12,9 +12,9 @@
     <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
      <a-entity oculus-touch-controls="hand: right" id="rightController" class="controller"></a-entity>
 
-    <a-plane color="gray" width="20" height="20" rotation="-90 0 0" position="0 -0.1 0"></a-plane>
+    <a-plane color="white" width="30" height="30" rotation="-90 0 0" position="0 -0.1 0"></a-plane>
 
-    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
+    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 90 0" scale="0.02 0.02 0.02">
         <a-entity id="car-start" position="0 0 1.5" geometry="primitive: sphere; radius: 0.05" material="color: red"></a-entity>
     </a-entity>
 
@@ -30,29 +30,6 @@
               this.acceleration = 0.005;
               this.brakingForce = 0.02;
               this.rotationSpeed = 0.5; // Drehgeschwindigkeit
-              this.carStartOffset = new THREE.Vector3(0, 0, 1.5); // Offset für car-start
-          },
-           tick: function () {
-            // Rotationsmatrix für die aktuelle Drehung des Autos
-            const carRotation = this.car.getAttribute('rotation');
-            const rotationMatrix = new THREE.Matrix4().makeRotationFromEuler(
-                new THREE.Euler(
-                    carRotation.x * Math.PI / 180,
-                    carRotation.y * Math.PI / 180,
-                    carRotation.z * Math.PI / 180
-                )
-            );
-            
-            // Offset für den car-start-Punkt in Weltkoordinaten transformieren
-             const carStartPosition = new THREE.Vector3();
-             this.carStartOffset.applyMatrix4(rotationMatrix);
-           carStartPosition.add(this.car.object3D.position)
-              carStartPosition.add(this.carStartOffset);
-               
-
-            this.carStart.setAttribute('position', carStartPosition);
-
-               this.carStartOffset.set(0, 0, 1.5)
           },
           handleThumbstick: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
