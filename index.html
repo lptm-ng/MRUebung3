@@ -7,8 +7,8 @@
 </head>
 <body>
   <a-scene>
-    <a-entity id="cameraRig" >
-        <a-entity camera look-controls wasd-controls id="camera" position="0 5 10" rotation="-45 0 0"></a-entity>
+   <a-entity id="cameraRig" position="0 5 10" rotation="-45 0 0">
+        <a-entity camera look-controls wasd-controls id="camera"></a-entity>
     </a-entity>
 
     <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
@@ -21,70 +21,46 @@
     </a-entity>
 
     <script>
-        AFRAME.registerComponent('car-controls', {
+      AFRAME.registerComponent('car-controls', {
           init: function () {
               this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
-                this.el.addEventListener('axismove', this.brake.bind(this)); //Added axismove for braking
+              this.el.addEventListener('axismove', this.brake.bind(this));
               this.car = document.getElementById('car');
               this.speed = 0;
               this.maxSpeed = 0.15;
               this.acceleration = 0.005;
               this.brakingForce = 0.02;
-                this.cameraRig = document.getElementById('cameraRig');
-              this.cameraOffset = new THREE.Vector3(0, 5, 10);
-                this.cameraRotation = new THREE.Vector3(-45, 0, 0);
+              this.cameraRig = document.getElementById('cameraRig');
+              this.cameraOffset = new THREE.Vector3(0, 5, 10); // Initial offset
+              this.cameraRotation = new THREE.Vector3(-45, 0, 0);
+          },
+           tick: function () {
+              const carPosition = this.car.getAttribute('position');
+             const carRotation = this.car.getAttribute('rotation').y * Math.PI / 180;
+               const offsetVector = new THREE.Vector3().copy(this.cameraOffset);
+                 offsetVector.applyAxisAngle(new THREE.Vector3(0,1,0), carRotation)
+               const newCameraPosition = new THREE.Vector3(carPosition.x, carPosition.y, carPosition.z).add(offsetVector);
+
+               this.cameraRig.setAttribute('position', newCameraPosition);
+
+             this.cameraRig.object3D.lookAt(new THREE.Vector3(carPosition.x, carPosition.y, carPosition.z));
+
 
           },
-            tick: function () {
-             //Update the cameras position every frame to follow the car
-                const carPosition = this.car.getAttribute('position');
-                const carRotation = this.car.getAttribute('rotation').y * Math.PI / 180;
-                
-
-                // Calculate the camera position
-                 const offsetVector = new THREE.Vector3().copy(this.cameraOffset);
-                 offsetVector.applyAxisAngle(new THREE.Vector3(0,1,0), carRotation) //Rotate the offset
-                 const newCameraPosition = new THREE.Vector3(carPosition.x, carPosition.y, carPosition.z).add(offsetVector);
-              
-
-               this.cameraRig.setAttribute('position', {
-                    x: newCameraPosition.x,
-                    y: newCameraPosition.y,
-                    z: newCameraPosition.z
-                });
-
-
-                //Calculate the camera rotation
-                 const cameraRotation = new THREE.Euler().setFromVector3(this.cameraRotation.clone().multiplyScalar(Math.PI / 180));
-                const cameraRotationQuaternion = new THREE.Quaternion().setFromEuler(cameraRotation)
-
-
-                //Set the new rotation on the camera
-                 this.cameraRig.object3D.quaternion.copy(cameraRotationQuaternion);
-                this.cameraRig.object3D.lookAt(new THREE.Vector3(carPosition.x,carPosition.y,carPosition.z))
-
-            },
-
           handleThumbstick: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
               if (hand === 'left') {
                   const thumbstickX = evt.detail.x;
                   const thumbstickY = evt.detail.y;
-                 
-                 
-                //Only accelerate if the joystick is moved forward
-                if (thumbstickY < 0) {
-                     this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-                }
-                   
-                
-                 // Convert car's rotation to radians
-                const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
 
-                 //Calculate movement relative to car's direction
+                  if (thumbstickY < 0) {
+                      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+                  }
+
+                  const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
+
                   const movementX = (thumbstickX * this.speed) * Math.cos(carRotationY) - (-thumbstickY * this.speed) * Math.sin(carRotationY);
                   const movementZ = (thumbstickX * this.speed) * Math.sin(carRotationY) + (-thumbstickY * this.speed) * Math.cos(carRotationY);
-
 
                   const currentPosition = this.car.getAttribute('position');
                   this.car.setAttribute('position', {
@@ -92,77 +68,60 @@
                       y: currentPosition.y,
                       z: currentPosition.z + movementZ
                   });
-                
 
-                  // Rotate car left or right
-                   const rotationSpeed = 0.5;
+                  const rotationSpeed = 0.5;
                   const turnAmount = -thumbstickX * rotationSpeed;
                   const currentRotation = this.car.getAttribute('rotation');
-                    this.car.setAttribute('rotation', {
-                    x: currentRotation.x,
-                    y: currentRotation.y + turnAmount,
-                    z: currentRotation.z,
+                  this.car.setAttribute('rotation', {
+                      x: currentRotation.x,
+                      y: currentRotation.y + turnAmount,
+                      z: currentRotation.z,
                   });
-
               }
           },
-
           brake: function (evt) {
-             //Check if the trigger is pressed down to brake
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
-
-             if (hand === 'left' && evt.detail.axis[3] < -0.8) {
-                 this.speed = Math.max(0, this.speed - this.brakingForce);
-                 
-             }
-         
+              if (hand === 'left' && evt.detail.axis[3] < -0.8) {
+                  this.speed = Math.max(0, this.speed - this.brakingForce);
+              }
           }
       });
+          AFRAME.registerComponent('camera-controls', {
+            init: function () {
+              this.el.sceneEl.addEventListener('thumbstickmoved', this.moveCamera.bind(this));
+              this.cameraRig = document.getElementById('cameraRig');
+              this.camera = document.getElementById('camera');
+            },
+            moveCamera: function (evt) {
+              const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+              if (hand === 'right') {
+                const thumbstickX = evt.detail.x;
+                const thumbstickY = evt.detail.y;
 
+                const rotationSpeed = 2;
+                const turnAmount = thumbstickX * rotationSpeed;
+                const tiltAmount = thumbstickY * rotationSpeed;
 
-      AFRAME.registerComponent('camera-controls', {
-        init: function () {
-            this.el.sceneEl.addEventListener('thumbstickmoved', this.moveCamera.bind(this));
-             this.cameraRig = document.getElementById('cameraRig');
-             this.camera = document.getElementById('camera');
-
-        },
-       moveCamera: function (evt) {
-             const hand = evt.target.getAttribute('oculus-touch-controls').hand;
-             if (hand === 'right') {
-               const thumbstickX = evt.detail.x;
-               const thumbstickY = evt.detail.y;
-                 
-               const rotationSpeed = 2;
-               const turnAmount = thumbstickX * rotationSpeed;
-               const tiltAmount = thumbstickY * rotationSpeed;
-
-             
-                //Rotate the camera on the Y-Axis
                 const currentRotationY = this.cameraRig.getAttribute('rotation').y;
                 this.cameraRig.setAttribute('rotation', {
                   x: this.cameraRig.getAttribute('rotation').x,
                   y: currentRotationY + turnAmount,
                   z: this.cameraRig.getAttribute('rotation').z
-                 })
+                });
 
-               //Tilt the camera on the X-Axis
-                 let currentRotationX = this.camera.getAttribute('rotation').x;
-                 currentRotationX = currentRotationX + tiltAmount
-                currentRotationX = Math.max(-60, Math.min(currentRotationX, 60))  //Clamp the value so it doesnt go upside down
+                let currentRotationX = this.camera.getAttribute('rotation').x;
+                currentRotationX = currentRotationX + tiltAmount
+                currentRotationX = Math.max(-60, Math.min(currentRotationX, 60));
 
                 this.camera.setAttribute('rotation', {
-                    x: currentRotationX,
-                    y: this.camera.getAttribute('rotation').y,
-                    z: this.camera.getAttribute('rotation').z
-                })
+                  x: currentRotationX,
+                  y: this.camera.getAttribute('rotation').y,
+                  z: this.camera.getAttribute('rotation').z
+                });
+              }
+            }
+          });
 
-             }
-        }
-     });
-
-
-      // Attach components
       document.getElementById('leftController').setAttribute('car-controls', '');
       document.getElementById('rightController').setAttribute('camera-controls', '');
     </script>
