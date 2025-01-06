@@ -1,23 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>A-Frame Car Test</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>A-Frame Car Test</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-  <a-scene>
-      <a-entity camera wasd-controls look-controls position="0 2 -2" id="camera"></a-entity>
-
-
+<a-scene>
+    <a-entity camera wasd-controls look-controls position="0 2 -2" id="camera"></a-entity>
     <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
-    
 
-    <a-plane color="white" width="10" height="10" rotation="-90 0 0" position="-5 -0.1 0"></a-plane>
-      <a-plane color="black" width="10" height="10" rotation="-90 0 0" position="5 -0.1 0"></a-plane>
+    <a-plane color="white" width="10" height="10" rotation="-90 0 0" position="0 -0.1 0" id="whitePlane"></a-plane>
+    <a-plane color="black" width="4" height="4" rotation="-90 0 0" position="0.05 0.1 0.05"></a-plane>
 
     <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
-      
+        <!-- Visualisierung des "Anfangs" des Autos -->
+        <a-entity id="car-start" geometry="primitive: sphere; radius: 0.1" material="color: red" position="0 0 0.5"></a-entity>
     </a-entity>
 
     <script>
@@ -26,6 +24,7 @@
               this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
               this.el.addEventListener('axismove', this.brake.bind(this));
               this.car = document.getElementById('car');
+              this.carStart = document.getElementById('car-start');
               this.speed = 0;
               this.maxSpeed = 0.15;
               this.acceleration = 0.005;
@@ -34,46 +33,50 @@
           handleThumbstick: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
               if (hand === 'left') {
-                  const thumbstickX = evt.detail.x;
-                  const thumbstickY = evt.detail.y;
+                const thumbstickX = evt.detail.x;
+                const thumbstickY = evt.detail.y;
 
-                  if (thumbstickY < 0) {
-                      this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
-                  }
 
-                  const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
+                if (thumbstickY < 0) {
+                    this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+                }
 
-                  const movementX = (thumbstickX * this.speed) * Math.cos(carRotationY) - (-thumbstickY * this.speed) * Math.sin(carRotationY);
-                  const movementZ = (thumbstickX * this.speed) * Math.sin(carRotationY) + (-thumbstickY * this.speed) * Math.cos(carRotationY);
+                // Lokale Vorwärtsrichtung des Autos abrufen
+                let forwardVector = new THREE.Vector3(0, 0, -1); // Auto zeigt standardmäßig in -Z
+                forwardVector.applyQuaternion(this.car.object3D.quaternion); // Ausrichtung des Autos berücksichtigen
+                forwardVector.multiplyScalar(-thumbstickY * this.speed);
+                  
+                let sideVector = new THREE.Vector3(1,0,0);
+                sideVector.applyQuaternion(this.car.object3D.quaternion);
+                sideVector.multiplyScalar(thumbstickX * this.speed);
 
-                  const currentPosition = this.car.getAttribute('position');
-                  this.car.setAttribute('position', {
-                      x: currentPosition.x + movementX,
-                      y: currentPosition.y,
-                      z: currentPosition.z + movementZ
-                  });
-
-                  const rotationSpeed = 0.5;
-                  const turnAmount = -thumbstickX * rotationSpeed;
-                  const currentRotation = this.car.getAttribute('rotation');
-                  this.car.setAttribute('rotation', {
-                      x: currentRotation.x,
-                      y: currentRotation.y + turnAmount,
-                      z: currentRotation.z,
-                  });
+                const currentPosition = this.car.getAttribute('position');
+                this.car.setAttribute('position', {
+                    x: currentPosition.x + forwardVector.x + sideVector.x,
+                    y: currentPosition.y,
+                    z: currentPosition.z + forwardVector.z + sideVector.z,
+                });
+                  
+                const rotationSpeed = 0.5;
+                const turnAmount = -thumbstickX * rotationSpeed;
+                const currentRotation = this.car.getAttribute('rotation');
+                this.car.setAttribute('rotation', {
+                  x: currentRotation.x,
+                  y: currentRotation.y + turnAmount,
+                  z: currentRotation.z,
+              });
               }
           },
-          brake: function (evt) {
+            brake: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
               if (hand === 'left' && evt.detail.axis[3] < -0.8) {
-                  this.speed = Math.max(0, this.speed - this.brakingForce);
+                this.speed = Math.max(0, this.speed - this.brakingForce);
               }
-          }
-      });
+            }
+        });
 
       document.getElementById('leftController').setAttribute('car-controls', '');
-    
     </script>
-  </a-scene>
+</a-scene>
 </body>
 </html>
