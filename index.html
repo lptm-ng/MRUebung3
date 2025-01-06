@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>A-Frame Car Test</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <meta charset="utf-8">
+    <title>A-Frame Car Test</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-  <a-scene>
-    <a-entity camera wasd-controls look-controls position="0 7 0" id="camera"></a-entity>
+    <a-scene>
+      <a-entity camera wasd-controls look-controls position="0 7 0" id="camera"></a-entity>
 
-    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
+      <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
 
-    <a-plane color="white" width="10" height="20" rotation="-90 0 0" position="-5 -0.1 0"></a-plane>
-     <a-plane color="black" width="10" height="20" rotation="-90 0 0" position="5 -0.1 0"></a-plane>
+        <a-plane color="white" width="10" height="20" rotation="-90 0 0" position="-5 -0.1 0" id="whitePlane"></a-plane>
+        <a-plane color="black" width="10" height="20" rotation="-90 0 0" position="5 -0.1 0" id="blackPlane"></a-plane>
 
 
-    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02"></a-entity>
+        <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
+        
+        </a-entity>
 
     <script>
       AFRAME.registerComponent('car-controls', {
@@ -27,30 +29,25 @@
               this.maxSpeed = 0.15;
               this.acceleration = 0.005;
               this.brakingForce = 0.02;
-              this.slowSpeed = this.maxSpeed * 0.5; // slowSpeed für nicht-Rennstrecke
-               this.raycaster = new THREE.Raycaster();
-               this.downwardDirection = new THREE.Vector3(0, -1, 0);
-               this.whiteColor = new THREE.Color("white");
-          },
-          tick: function () {
+             this.slowSpeed = this.maxSpeed * 0.5; // Lower speed when not on black
+                this.whitePlane = document.getElementById('whitePlane');
+                this.blackPlane = document.getElementById('blackPlane');
 
-             const carPosition = this.car.getAttribute('position');
+            },
+          tick: function() {
+                const carPosition = this.car.getAttribute('position');
+                let currentSpeed = this.maxSpeed;
 
-             this.raycaster.set(new THREE.Vector3(carPosition.x, carPosition.y, carPosition.z), this.downwardDirection);
+              const carX = carPosition.x;
 
-             const intersects = this.raycaster.intersectObjects(this.el.sceneEl.querySelectorAll('a-plane'));
-
-            if (intersects.length > 0) {
-                 const intersectedObject = intersects[0].object;
-                 const intersectedColor = intersectedObject.material.color;
-
-                   if(intersectedColor.equals(this.whiteColor)){
-                      this.maxSpeed = this.slowSpeed;
-                  } else {
-                      this.maxSpeed = 0.15;
-                  }
+            if (carX < 0) {
+                //Car is on white plane
+                 currentSpeed = this.slowSpeed;
                 }
-          },
+
+
+             this.maxSpeed = currentSpeed;
+            },
          handleThumbstick: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
               if (hand === 'left') {
@@ -95,6 +92,6 @@
       document.getElementById('leftController').setAttribute('car-controls', '');
     
     </script>
-  </a-scene>
+    </a-scene>
 </body>
 </html>
