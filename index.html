@@ -1,54 +1,37 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>A-Frame Car Test</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <meta charset="utf-8">
+  <title>A-Frame Car Test</title>
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 </head>
 <body>
-    <a-scene>
-      <a-entity camera wasd-controls look-controls position="0 7 0" id="camera"></a-entity>
-
-      <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
-
-        <a-plane color="white" width="10" height="20" rotation="-90 0 0" position="-5 -0.1 0" id="whitePlane"></a-plane>
-        <a-plane color="black" width="10" height="20" rotation="-90 0 0" position="5 -0.1 0" id="blackPlane"></a-plane>
+  <a-scene>
+      <a-entity camera wasd-controls look-controls position="0 2 -2" id="camera"></a-entity>
 
 
-        <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
-        
-        </a-entity>
+    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
+    
+
+    <a-plane color="white" width="10" height="10" rotation="-90 0 0" position="-5 -0.1 0"></a-plane>
+      <a-plane color="black" width="10" height="10" rotation="-90 0 0" position="5 -0.1 0"></a-plane>
+
+    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02">
+      
+    </a-entity>
 
     <script>
       AFRAME.registerComponent('car-controls', {
           init: function () {
-            this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
+              this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
               this.el.addEventListener('axismove', this.brake.bind(this));
               this.car = document.getElementById('car');
               this.speed = 0;
               this.maxSpeed = 0.15;
               this.acceleration = 0.005;
               this.brakingForce = 0.02;
-             this.slowSpeed = this.maxSpeed * 0.5; // Lower speed when not on black
-                this.whitePlane = document.getElementById('whitePlane');
-                this.blackPlane = document.getElementById('blackPlane');
-
-            },
-          tick: function() {
-                const carPosition = this.car.getAttribute('position');
-                let currentSpeed = this.maxSpeed;
-
-              const carX = carPosition.x;
-
-            if (carX < 0) {
-                //Car is on white plane
-                 currentSpeed = this.slowSpeed;
-                }
-
-
-             this.maxSpeed = currentSpeed;
-            },
-         handleThumbstick: function (evt) {
+          },
+          handleThumbstick: function (evt) {
               const hand = evt.target.getAttribute('oculus-touch-controls').hand;
               if (hand === 'left') {
                   const thumbstickX = evt.detail.x;
@@ -88,10 +71,9 @@
           }
       });
 
-
       document.getElementById('leftController').setAttribute('car-controls', '');
     
     </script>
-    </a-scene>
+  </a-scene>
 </body>
 </html>
