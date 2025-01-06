@@ -7,14 +7,15 @@
 </head>
 <body>
   <a-scene>
-    <a-entity camera wasd-controls look-controls position="0 7 0" id="camera"></a-entity> // zum testen ohne headset (nur kamera)
+    <a-entity camera wasd-controls look-controls position="0 7 0" id="camera"></a-entity>
 
-    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity> // nur linker joystick nötig zum fahren
+    <a-entity oculus-touch-controls="hand: left" id="leftController" class="controller"></a-entity>
 
-    <a-plane color="white" width="10" height="20" rotation="-90 0 0" position="-5 -0.1 0"></a-plane> // test planes
+    <a-plane color="white" width="10" height="20" rotation="-90 0 0" position="-5 -0.1 0"></a-plane>
      <a-plane color="black" width="10" height="20" rotation="-90 0 0" position="5 -0.1 0"></a-plane>
 
-    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02"> </a-entity> // unser BMW!!
+
+    <a-entity id="car" gltf-model="url(models/bmw-326/scene.gltf)" position="0 0 -5" rotation="0 180 0" scale="0.02 0.02 0.02"></a-entity>
 
     <script>
       AFRAME.registerComponent('car-controls', {
