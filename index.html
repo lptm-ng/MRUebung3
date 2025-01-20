@@ -38,7 +38,7 @@
       },
     });
 
-    
+
     AFRAME.registerComponent("ar-shadows", {
       // Swap an object's material to a transparent shadows-only material while
       // in AR mode. Intended for use with a ground plane. The object is also
@@ -90,9 +90,12 @@
     <a-entity environment="lighting: none; shadow: none; lightPosition: 0 2.15 0" hide-in-ar-mode></a-entity>
     </a-entity>
     <a-entity id="container" position="0 0.01 0" scale="0.5 0.5 0.5">
-      <a-plane id="racetrack_l" src="#racetrack_large" height="4" width="4" position="0 0.01 0" rotation="-90 0 0"visible="true" shadow="receive: false"></a-plane>
-      <a-plane id="racetrack_m" src="#racetrack_middle" height="4" width="4" position="0 0.01 0" rotation="-90 0 0" visible="false" shadow="receive: false"></a-plane>
-      <a-plane id="racetrack_s" src="#racetrack_small" height="4" width="4" position="0 0.01 0" rotation="-90 0 0"visible="false"shadow="receive: false"></a-plane>
+      <a-plane id="racetrack_l" src="#racetrack_large" height="4" width="4" position="0 0.01 0" rotation="-90 0 0"
+        visible="true" shadow="receive: false"></a-plane>
+      <a-plane id="racetrack_m" src="#racetrack_middle" height="4" width="4" position="0 0.01 0" rotation="-90 0 0"
+        visible="false" shadow="receive: false"></a-plane>
+      <a-plane id="racetrack_s" src="#racetrack_small" height="4" width="4" position="0 0.01 0" rotation="-90 0 0"
+        visible="false" shadow="receive: false"></a-plane>
       <a-entity id="car" gltf-model="url(bmw-326/cartest.glb)" position="-1 0.03 1.7" rotation="0 90 0"
         scale="0.0005 0.0005 0.0005" shadow="receive: false"></a-entity>
     </a-entity>
@@ -207,19 +210,56 @@
         this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
         this.el.addEventListener('axismove', this.brake.bind(this));
         this.car = document.getElementById('car');
+        this.racetrack = document.getElementById('RT');
         this.speed = 0;
         this.maxSpeed = 0.006;
+        this.maxSpeed_offroad = 0.005;
         this.acceleration = 0.005;
         this.brakingForce = 0.02;
         this.rotationSpeed = 2;
+        this.canvas = document.createElement('canvas');
+        this.context = this.canvas.getContext('2d');
+      },
+      update: function () {
+        if (this.racetrack.getAttribute('src')) {
+          const img = this.racetrack.getAttribute('src');
+
+          const image = document.querySelector(img);
+
+          this.canvas.width = image.naturalWidth;
+          this.canvas.height = image.naturalHeight;
+          this.context.drawImage(image, 0, 0);
+        }
       },
       handleThumbstick: function (evt) {
         const hand = evt.target.getAttribute('oculus-touch-controls').hand;
         if (hand === 'left') {
           const thumbstickY = evt.detail.y;
-          // nach vorne fahren mit linken joystick
+
+          // geschwindigkeit anpassung je ob auf rennstrecke oder nicht
+          let currentSpeed = this.maxSpeed; // auf strecke
+          if (this.canvas) {
+            const carPosition = this.car.getAttribute('position');
+            const trackWidth = this.racetrack.getAttribute('width');
+            const trackHeight = this.racetrack.getAttribute('height');
+            // auto-pos zu pixelkoordinaten der canva
+            const canvasX = Math.floor(((carPosition.x + (trackWidth / 2)) / trackWidth) * this.canvas.width);
+            const canvasY = Math.floor(((carPosition.z + (trackHeight / 2)) / trackHeight) * this.canvas.height);
+            const pixelData = this.context.getImageData(canvasX, canvasY, 1, 1).data;
+            const pixelColor = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
+
+            // wenn Farbe nicht "rgb(38, 38, 38)" ist 
+            const isOffRoad = pixelColor !== 'rgb(38, 38, 38)'
+
+            if (isOffRoad) {
+              currentSpeed = this.maxSpeed_offroad; // langsamere geschwindigkeit außerhalb der strecke
+            } else {
+              currentSpeed = this.maxSpeed;
+            }
+          }
+
           if (thumbstickY < 0) {
-            this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+            this.speed = Math.min(this.speed + this.acceleration, currentSpeed);
           } else {
             this.speed = Math.max(0, this.speed - this.brakingForce)
           }
@@ -244,7 +284,6 @@
             y: currentRotation.y + turnAmount,
             z: currentRotation.z,
           });
-
         }
       },
       brake: function (evt) {
@@ -254,10 +293,6 @@
         }
       }
     });
-
-    document.getElementById('leftController').setAttribute('car-controls', '');
-    document.getElementById('rightController').setAttribute('car-controls', '');
-
   </script>
 
 </body>
