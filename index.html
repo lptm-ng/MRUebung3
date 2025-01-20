@@ -206,93 +206,98 @@
   </script>
   <script>
     AFRAME.registerComponent('car-controls', {
-      init: function () {
+    init: function () {
         this.el.sceneEl.addEventListener('thumbstickmoved', this.handleThumbstick.bind(this));
         this.el.addEventListener('axismove', this.brake.bind(this));
         this.car = document.getElementById('car');
         this.racetrack = document.getElementById('RT');
         this.speed = 0;
-        this.maxSpeed = 0.006;
+        this.maxSpeed = 0.01;
         this.maxSpeed_offroad = 0.005;
         this.acceleration = 0.005;
         this.brakingForce = 0.02;
-        this.rotationSpeed = 2;
+        this.rotationSpeed = 5;
         this.canvas = document.createElement('canvas');
         this.context = this.canvas.getContext('2d');
-      },
-      update: function () {
-        if (this.racetrack.getAttribute('src')) {
-          const img = this.racetrack.getAttribute('src');
-
-          const image = document.querySelector(img);
-
-          this.canvas.width = image.naturalWidth;
-          this.canvas.height = image.naturalHeight;
-          this.context.drawImage(image, 0, 0);
+         this.currentTrack = null;
+    },
+     update: function () {
+       if (this.racetrack.getAttribute('src') !== this.currentTrack) {
+            this.currentTrack = this.racetrack.getAttribute('src');
+            this.updateCanvas();
         }
-      },
-      handleThumbstick: function (evt) {
+    },
+      updateCanvas: function(){
+        if (this.racetrack.getAttribute('src')) {
+            const img = this.racetrack.getAttribute('src');
+            const image = document.querySelector(img);
+            this.canvas.width = image.naturalWidth;
+            this.canvas.height = image.naturalHeight;
+            this.context.drawImage(image, 0, 0);
+            
+        }
+    },
+    handleThumbstick: function (evt) {
         const hand = evt.target.getAttribute('oculus-touch-controls').hand;
         if (hand === 'left') {
-          const thumbstickY = evt.detail.y;
+            const thumbstickY = evt.detail.y;
+             let currentSpeed = this.maxSpeed;
+             if(this.canvas){
+                  const carPosition = this.car.getAttribute('position');
+                  const trackWidth = this.racetrack.getAttribute('width');
+                  const trackHeight = this.racetrack.getAttribute('height');
+              
+                  const canvasX = Math.floor(((carPosition.x + (trackWidth / 2)) / trackWidth) * this.canvas.width);
+                  const canvasY = Math.floor(((carPosition.z + (trackHeight / 2)) / trackHeight) * this.canvas.height);
 
-          // geschwindigkeit anpassung je ob auf rennstrecke oder nicht
-          let currentSpeed = this.maxSpeed; // auf strecke
-          if (this.canvas) {
-            const carPosition = this.car.getAttribute('position');
-            const trackWidth = this.racetrack.getAttribute('width');
-            const trackHeight = this.racetrack.getAttribute('height');
-            // auto-pos zu pixelkoordinaten der canva
-            const canvasX = Math.floor(((carPosition.x + (trackWidth / 2)) / trackWidth) * this.canvas.width);
-            const canvasY = Math.floor(((carPosition.z + (trackHeight / 2)) / trackHeight) * this.canvas.height);
-            const pixelData = this.context.getImageData(canvasX, canvasY, 1, 1).data;
-            const pixelColor = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
+                  const pixelData = this.context.getImageData(canvasX, canvasY, 1, 1).data;
+                  const pixelColor = `rgb(${pixelData[0]}, ${pixelData[1]}, ${pixelData[2]})`;
 
-            // wenn Farbe nicht "rgb(38, 38, 38)" ist 
-            const isOffRoad = pixelColor !== 'rgb(38, 38, 38)'
+                  const isOffRoad = pixelColor !== 'rgb(38, 38, 38)';
 
-            if (isOffRoad) {
-              currentSpeed = this.maxSpeed_offroad; // langsamere geschwindigkeit außerhalb der strecke
+
+                if (isOffRoad) {
+                    currentSpeed = this.maxSpeed_offroad;
+                } else {
+                    currentSpeed = this.maxSpeed;
+                }
+             }
+
+             if (thumbstickY < 0) {
+                  this.speed = Math.min(this.speed + this.acceleration, currentSpeed);
             } else {
-              currentSpeed = this.maxSpeed;
+                this.speed = Math.max(0, this.speed - this.brakingForce)
             }
-          }
-
-          if (thumbstickY < 0) {
-            this.speed = Math.min(this.speed + this.acceleration, currentSpeed);
-          } else {
-            this.speed = Math.max(0, this.speed - this.brakingForce)
-          }
-
-          const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
-          const movementZ = -thumbstickY * this.speed;
-          const movementX = (movementZ) * Math.sin(carRotationY);
-          const movementY = 0;
-          const movementZUpdated = (movementZ) * Math.cos(carRotationY);
-          const currentPosition = this.car.getAttribute('position');
-          this.car.setAttribute('position', {
-            x: currentPosition.x + movementX,
-            y: currentPosition.y + movementY,
-            z: currentPosition.z + movementZUpdated
-          });
+          
+            const carRotationY = this.car.getAttribute('rotation').y * Math.PI / 180;
+            const movementZ = -thumbstickY * this.speed;
+            const movementX = (movementZ) * Math.sin(carRotationY);
+            const movementY = 0;
+            const movementZUpdated = (movementZ) * Math.cos(carRotationY);
+            const currentPosition = this.car.getAttribute('position');
+            this.car.setAttribute('position', {
+                x: currentPosition.x + movementX,
+                y: currentPosition.y + movementY,
+                z: currentPosition.z + movementZUpdated
+            });
         } else if (hand === 'right') {
-          const thumbstickX = evt.detail.x;
-          const turnAmount = -thumbstickX * this.rotationSpeed;
-          const currentRotation = this.car.getAttribute('rotation');
-          this.car.setAttribute('rotation', {
-            x: currentRotation.x,
-            y: currentRotation.y + turnAmount,
-            z: currentRotation.z,
-          });
+            const thumbstickX = evt.detail.x;
+            const turnAmount = -thumbstickX * this.rotationSpeed;
+            const currentRotation = this.car.getAttribute('rotation');
+            this.car.setAttribute('rotation', {
+                x: currentRotation.x,
+                y: currentRotation.y + turnAmount,
+                z: currentRotation.z,
+            });
         }
-      },
-      brake: function (evt) {
-        const hand = evt.target.getAttribute('oculus-touch-controls').hand;
+    },
+    brake: function (evt) {
+      const hand = evt.target.getAttribute('oculus-touch-controls').hand;
         if (hand === 'left' && evt.detail.axis[3] < -0.8) {
-          this.speed = Math.max(0, this.speed - this.brakingForce);
+            this.speed = Math.max(0, this.speed - this.brakingForce);
         }
-      }
-    });
+    }
+});
   </script>
 
 </body>
